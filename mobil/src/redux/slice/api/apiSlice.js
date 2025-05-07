@@ -1,14 +1,14 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../../../../API/config";
 import { handleUnauthorized } from "../../../util/authHelpers";
 import { AUTH_ERRORS } from "../../../util/constants";
+import { validateTokenAndUser } from "../../../util/authHelpers";
 
 const baseQuery = fetchBaseQuery({
   baseUrl: `${API_URL}/api`,
   prepareHeaders: async (headers) => {
     try {
-      const token = await AsyncStorage.getItem("token");
+      const { token } = await validateTokenAndUser();
 
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
@@ -27,7 +27,7 @@ const baseQuery = fetchBaseQuery({
 const baseQueryWithReauth = async (args, api, extraOptions) => {
   // Eğer endpoint auth ile ilgili değilse ve token yoksa, isteği engelle
   if (!args.url.includes("login") && !args.url.includes("register")) {
-    const token = await AsyncStorage.getItem("token");
+    const { token } = await validateTokenAndUser();
     if (!token) {
       // Token yoksa kullanıcıyı login ekranına yönlendir
       console.log("apiSlice: Token bulunamadı, çıkış yapılıyor");

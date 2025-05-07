@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { STORAGE_KEYS } from "../util/constants";
+import { saveAuthData, clearAuthData } from "../util/authHelpers";
 
 const initialState = {
   user: null,
@@ -31,21 +30,13 @@ const authSlice = createSlice({
 
       // Token'ları AsyncStorage'a kaydet
       if (action.payload.token) {
-        Promise.all([
-          AsyncStorage.setItem("token", action.payload.token),
-          AsyncStorage.setItem("userId", action.payload.userId),
-          AsyncStorage.setItem("role", action.payload.role),
-          action.payload.user
-            ? AsyncStorage.setItem(
-                "currentUser",
-                JSON.stringify(action.payload.user)
-              )
-            : Promise.resolve(),
+        saveAuthData(
+          action.payload.token,
+          action.payload.userId,
+          action.payload.role,
+          action.payload.user,
           action.payload.sessionId
-            ? AsyncStorage.setItem("sessionId", action.payload.sessionId)
-            : Promise.resolve(),
-          AsyncStorage.setItem("loginTime", timestamp),
-        ]).catch((error) => {
+        ).catch((error) => {
           console.error("Token kaydetme hatası:", error);
         });
       }
@@ -59,7 +50,7 @@ const authSlice = createSlice({
         lastUpdate: timestamp,
       });
 
-      AsyncStorage.multiRemove(STORAGE_KEYS).catch((error) => {
+      clearAuthData().catch((error) => {
         console.error("Storage temizleme hatası:", error);
       });
     },
@@ -98,16 +89,13 @@ const authSlice = createSlice({
         state.lastUpdate = timestamp;
 
         if (action.payload.token) {
-          Promise.all([
-            AsyncStorage.setItem("token", action.payload.token),
-            AsyncStorage.setItem("userId", action.payload.userId),
-            AsyncStorage.setItem("role", action.payload.role),
-            AsyncStorage.setItem("currentUser", JSON.stringify(user)),
+          saveAuthData(
+            action.payload.token,
+            action.payload.userId,
+            action.payload.role,
+            user,
             action.payload.sessionId
-              ? AsyncStorage.setItem("sessionId", action.payload.sessionId)
-              : Promise.resolve(),
-            AsyncStorage.setItem("loginTime", timestamp),
-          ]).catch((error) => {
+          ).catch((error) => {
             console.error("Token kaydetme hatası:", error);
           });
         }
@@ -126,7 +114,7 @@ const authSlice = createSlice({
           ...initialState,
           lastUpdate: timestamp,
         });
-        AsyncStorage.multiRemove(STORAGE_KEYS).catch((error) => {
+        clearAuthData().catch((error) => {
           console.error("Storage temizleme hatası:", error);
         });
       }

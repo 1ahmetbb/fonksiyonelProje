@@ -11,9 +11,16 @@ import RegisterScreen from "../screens/RegisterScreen";
 import AddTaskScreen from "../screens/AddTaskScreen";
 import TaskDetailScreen from "../screens/TaskDetailScreen";
 import EditUserScreen from "../screens/EditUserScreen";
-import { validateTokenAndUser, handleUnauthorized } from "../util/authHelpers";
-import { handleError, handleApiError } from "../util/errorHandlers";
+import {
+  validateTokenAndUser,
+  handleUnauthorized,
+  normalizeUserData,
+} from "../util/authHelpers";
+import { handleError, handleApiError } from "../util/errorHandler";
 import { NavigationContainer } from "@react-navigation/native";
+import AddCommitScreen from "../screens/AddCommitScreen";
+import CommitListScreen from "../screens/CommitListScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +63,22 @@ function AfterAuthenticationStack() {
         <Stack.Screen
           name="EditUser"
           component={EditUserScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="AddCommit"
+          component={AddCommitScreen}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="CommitList"
+          component={CommitListScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
           options={{ headerShown: false }}
         />
       </>
@@ -143,19 +166,14 @@ function Navigation() {
   // API'den kullanıcı bilgileri gelince Redux store'u güncelle
   useEffect(() => {
     if (user && authState.token) {
-      const enhancedUserData = {
-        ...user,
-        name: user.name,
-        title: user.title,
-        role: user.role,
-      };
+      const normalizedUser = normalizeUserData(user);
 
       dispatch(
         loginSuccess({
-          user: enhancedUserData,
+          user: normalizedUser,
           token: authState.token,
-          userId: user.userId || user._id || authState.userId,
-          role: user.role || authState.role,
+          userId: normalizedUser._id,
+          role: normalizedUser.role,
           isAuthenticated: true,
           sessionId: authState.sessionId,
         })
@@ -166,11 +184,8 @@ function Navigation() {
   // API hatası durumunda
   useEffect(() => {
     if (isError && error) {
-      // 401 Unauthorized hatası durumunda sadece handleUnauthorized kullan, handleApiError değil
+      // 401 Unauthorized hatası durumunda sadece handleUnauthorized kullan
       if (error.status === 401) {
-        console.log(
-          "StackNavigator: 401 hatası tespit edildi, çıkış yapılıyor"
-        );
         handleUnauthorized(dispatch, logout);
       } else {
         // Diğer hatalar için normal hata işleme kullan

@@ -18,7 +18,7 @@ export default function CustomDrawerContent(props) {
       >
         <View style={styles.logoWrapper}>
           <Image
-            source={require("../../assets/BeraLogo-1.png")}
+            //source={require("")}
             style={styles.logo}
           />
         </View>

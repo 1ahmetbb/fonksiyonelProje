@@ -22,6 +22,8 @@ export {
   useMarkNotificationReadMutation,
   useActivateUserMutation,
   useDeleteUserMutation,
+  useChangePasswordMutation,
+  useResetUserPasswordByAdminMutation,
 } from './authApiSlice';
 
 export {
@@ -31,4 +33,5 @@ export {
   useUpdateTaskMutation,
   useDeleteRestoreTaskMutation,
   useGetTrashedTasksQuery,
-} from './taskApiSlice'; 
+  useAddTaskActivityMutation,
+} from './taskApiSlice';

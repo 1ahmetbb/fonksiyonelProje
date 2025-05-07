@@ -1,32 +1,28 @@
 import { apiSlice } from "./apiSlice";
+import { normalizeUserData } from "../../../util/authHelpers";
 
 // Auth ilgili API endpoints
 export const authApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
-
     login: builder.mutation({
       query: (credentials) => ({
         url: "user/login",
         method: "POST",
         body: credentials,
       }),
-      
+
       transformResponse: (response, meta, arg) => {
         if (!response.status) {
           throw new Error(response.message || "Giriş başarısız");
         }
-        
+
         const enhancedResponse = {
           ...response,
-          user: {
-            _id: response.userId || response.user?._id || response._id,
-            email: response.email || response.user?.email || arg?.email || "",
-            name: response.name || response.user?.name,
-            title: response.title || response.user?.title, 
-            role: response.role || response.user?.role, 
-            isActive: response.isActive === undefined ? true : response.isActive,
-          }
+          user: normalizeUserData({
+            ...response,
+            email: arg?.email,
+          }),
         };
         return enhancedResponse;
       },
@@ -53,7 +49,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         };
       },
     }),
-    
+
     updateUser: builder.mutation({
       query: ({ id, userData }) => ({
         url: `user/profile/${id}`,
@@ -69,7 +65,7 @@ export const authApiSlice = apiSlice.injectEndpoints({
         const result = {
           status: response.status || true,
           message: response.message || "Kullanıcı başarıyla güncellendi",
-          updatedUser: response.updatedUser || response.user || response
+          updatedUser: response.updatedUser || response.user || response,
         };
         return result;
       },
@@ -77,19 +73,20 @@ export const authApiSlice = apiSlice.injectEndpoints({
         console.error("Güncelleme hatası:", error);
         return {
           status: false,
-          message: error.data?.message || "Güncelleme sırasında bir hata oluştu",
+          message:
+            error.data?.message || "Güncelleme sırasında bir hata oluştu",
         };
       },
       invalidatesTags: ["User", "Team"],
     }),
-    
+
     logout: builder.mutation({
       query: () => ({
         url: "user/logout",
         method: "POST",
       }),
     }),
-    
+
     getUser: builder.query({
       query: () => ({
         url: "user/profile",
@@ -99,20 +96,12 @@ export const authApiSlice = apiSlice.injectEndpoints({
         if (!response) {
           throw new Error("Kullanıcı bilgileri alınamadı");
         }
-        const userData = {
-          _id: response._id || response.userId || response.id || null,
-          name: response.name || "",
-          email: response.email || "",
-          title: response.title || "",
-          role: response.role || "",
-          isActive: response.isActive === undefined ? true : response.isActive,
-        };
-        return userData;
+        return normalizeUserData(response);
       },
       providesTags: ["User"],
       keepUnusedDataFor: 0,
     }),
-    
+
     getTeamList: builder.query({
       query: () => ({
         url: "user/get-team",
@@ -123,18 +112,8 @@ export const authApiSlice = apiSlice.injectEndpoints({
           console.warn("Team list yanıtı geçersiz format:", response);
           return [];
         }
-        
-        // Takım üyelerinin eksik verilerini doldur
-        const enhancedTeamList = response.map(user => ({
-          ...user,
-          name: user.name,
-          email: user.email,
-          title: user.title,
-          role: user.role,
-          isActive: user.isActive === undefined ? true : user.isActive
-        }));
-        
-        return enhancedTeamList;
+
+        return response.map((user) => normalizeUserData(user));
       },
       async onQueryStarted(args, { dispatch, queryFulfilled }) {
         try {
@@ -144,12 +123,12 @@ export const authApiSlice = apiSlice.injectEndpoints({
         }
       },
       extraOptions: {
-        maxRetries: 0
+        maxRetries: 0,
       },
       providesTags: ["Team"],
       keepUnusedDataFor: 0,
     }),
-    
+
     getNotificationsList: builder.query({
       query: () => ({
         url: "user/notifications",
@@ -160,16 +139,15 @@ export const authApiSlice = apiSlice.injectEndpoints({
       },
       providesTags: ["Notifications"],
     }),
-    
+
     markNotificationRead: builder.mutation({
       query: ({ isReadType, id }) => ({
-        url: "user/read-noti",
+        url: `user/read-noti?${isReadType ? `isReadType=${isReadType}` : ""}${id ? `&id=${id}` : ""}`,
         method: "PUT",
-        body: { isReadType, id },
       }),
       invalidatesTags: ["Notifications"],
     }),
-    
+
     activateUser: builder.mutation({
       query: ({ id, isActive }) => ({
         url: `user/${id}/activate`,
@@ -178,12 +156,54 @@ export const authApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User", "Team"],
     }),
-    
+
     deleteUser: builder.mutation({
       query: (id) => ({
         url: `user/${id}`,
         method: "DELETE",
       }),
+      invalidatesTags: ["Team"],
+    }),
+
+    changePassword: builder.mutation({
+      query: ({ password }) => ({
+        url: "user/change-password",
+        method: "PUT",
+        body: { password },
+      }),
+      transformResponse: (response) => {
+        if (!response.status) {
+          throw new Error(response.message || "Şifre güncelleme başarısız");
+        }
+        return response;
+      },
+      transformErrorResponse: (error) => {
+        return {
+          status: false,
+          message:
+            error.data?.message || "Şifre değiştirilirken bir hata oluştu",
+        };
+      },
+    }),
+
+    resetUserPasswordByAdmin: builder.mutation({
+      query: ({ id, password }) => ({
+        url: `user/reset-password/${id}`,
+        method: "PUT",
+        body: { password },
+      }),
+      transformResponse: (response) => {
+        if (!response.status) {
+          throw new Error(response.message || "Şifre sıfırlama başarısız");
+        }
+        return response;
+      },
+      transformErrorResponse: (error) => {
+        return {
+          status: false,
+          message: error.data?.message || "Şifre sıfırlanırken bir hata oluştu",
+        };
+      },
       invalidatesTags: ["Team"],
     }),
   }),
@@ -200,4 +220,6 @@ export const {
   useMarkNotificationReadMutation,
   useActivateUserMutation,
   useDeleteUserMutation,
+  useChangePasswordMutation,
+  useResetUserPasswordByAdminMutation,
 } = authApiSlice;

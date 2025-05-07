@@ -4,7 +4,6 @@ import { apiSlice } from "./apiSlice";
 export const taskApiSlice = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
-    
     fetchTasks: builder.query({
       query: () => ({
         url: "task",
@@ -57,7 +56,7 @@ export const taskApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Tasks"],
     }),
-    
+
     getTrashedTasks: builder.query({
       query: () => ({
         url: "task?isTrashed=true",
@@ -67,6 +66,20 @@ export const taskApiSlice = apiSlice.injectEndpoints({
         return response.tasks || [];
       },
       providesTags: ["Tasks"],
+    }),
+
+    addTaskActivity: builder.mutation({
+      query: ({ taskId, activity, type }) => ({
+        url: `task/activity/${taskId}`,
+        method: "POST",
+        body: {
+          type,
+          activity,
+        },
+      }),
+      invalidatesTags: (result, error, { taskId }) => [
+        { type: "Tasks", id: taskId },
+      ],
     }),
   }),
 });
@@ -78,4 +91,5 @@ export const {
   useUpdateTaskMutation,
   useDeleteRestoreTaskMutation,
   useGetTrashedTasksQuery,
+  useAddTaskActivityMutation,
 } = taskApiSlice;
